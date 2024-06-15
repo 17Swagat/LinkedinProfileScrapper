@@ -109,7 +109,7 @@ def search_user(driver, first_name, last_name):
             full_url = f"{url}"
             if full_url not in profile_urls:
                 profile_urls.append(full_url)
-        if len(profile_urls) >= 5: #10:
+        if len(profile_urls) >= 10: #5:
             break
 
     return profile_urls
@@ -189,8 +189,126 @@ def scrape_profile_data(driver, profile_url, index):
         
         elif section_name == 'education':
             ...
+        
         elif section_name == 'experience':
+            # print('experience')
+            # profile_data['experience'] = 'exp'
+
+            # all-experiences
+            all_exps = section.find('ul').find_all('li', recursive=False)
+            all_exps_count = len(all_exps)
+            for i in range(all_exps_count):
+                # profile_data['experience'].update({f'job_{i+1}': ''})  ❌
+                profile_data.update({
+                    'experience': {
+                        f'job_{i+1}': ''
+                    }
+                })
+
+            # going through all exps
+            for index, exp in enumerate(all_exps):
+                job_no = index + 1
+                info_count = len(exp)
+                
+                # 4 + 1 = 5   : Role, CompanyName
+                # 7 + 1 = 8   : Role, CompanyName, Duration(Time)
+                # 10 + 1 = 11 : Role, CompanyName, Duration(Time), Location
+                # 12 + 1 = 13 : Role, CompanyName, Duration(Time), Location, Description
+
+                if info_count == 5:
+                    profile_data.update({
+                        'experience': {
+                            f'job_{job_no}': {
+                                'role': exp.find_all('span')[1].get_text(strip=True),
+                                'company': exp.find_all('span')[4].get_text(strip=True)
+                            }
+                        }
+                    })
+                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
+                
+                elif info_count == 8:
+                    profile_data.update({
+                        'experience': {
+                            f'job_{job_no}': {
+                                'role': exp.find_all('span')[1].get_text(strip=True),
+                                'company': exp.find_all('span')[4].get_text(strip=True),
+                                'duration': exp.find_all('span')[7].get_text(strip=True),
+                            }
+                        }
+                    })
+                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
+
+                elif info_count == 11:
+                    profile_data.update({
+                        'experience': {
+                            f'job_{job_no}': {
+                                'role': exp.find_all('span')[1].get_text(strip=True),
+                                'company': exp.find_all('span')[4].get_text(strip=True),
+                                'duration': exp.find_all('span')[7].get_text(strip=True),
+                            }
+                        }
+                    })
+                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['location'] = exp.find_all('span')[10].get_text(strip=True)
+
+                elif info_count == 13:
+                    profile_data.update({
+                        'experience': {
+                            f'job_{job_no}': {
+                                'role': exp.find_all('span')[1].get_text(strip=True),
+                                'company': exp.find_all('span')[4].get_text(strip=True),
+                                'duration': exp.find_all('span')[7].get_text(strip=True),
+                                'job-description': exp.find_all('span')[12].get_text(strip=True)
+                            }
+                        }
+                    })
+                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['location'] = exp.find_all('span')[10].get_text(strip=True)
+                    # profile_data['experience'][f'job {job_no}']['job-description'] = exp.find_all('span')[12].get_text(strip=True)
+
+                else:
+                    print(info_count)
+                    print('CASE NOT EXPECTED\n')
+
+
             ...
+
+            
+            '''
+
+            # len(section.find('ul').find_all('li', recursive=False)) = 2
+            
+            # 
+            all_exps = section.find('ul').find_all('li', recursive=False)
+            for exp in all_exps:
+                ...
+
+            # ver 1 ✅ title
+            section.find('ul').find_all('li', recursive=False)[0].find('span', {'class': 'visually-hidden'}).get_text(strip=True)  
+            # ver 2
+            section.find('ul').find_all('li', recursive=False)[0].find_all('span')  
+            
+
+            # xxx 1
+            len(section.find('ul').find_all('li', recursive=False))
+            
+            len(section.find('ul').find_all('li', recursive=False)[1].find_all('span'))
+            
+            section.find('ul').find_all('li', recursive=False)[1].find_all('span')[0].get_text(strip=True)
+
+            # 
+            
+            '''
+            
+            ...
+        
         elif section_name == 'skills':
             ...
         elif section_name == 'interests':
