@@ -116,9 +116,9 @@ def scrape_profile_data(driver, profile_url, index):
     profile_data['name'] = soup.find('h1', class_='text-heading-xlarge').get_text(strip=True) if soup.find('h1', class_='text-heading-xlarge') else None
     profile_data['headline'] = soup.find('div', class_='text-body-medium').get_text(strip=True) if soup.find('div', class_='text-body-medium') else None
     profile_data['identify_as'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
-    # profile_data['location'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
-    # profile_data['about'] = soup.find('div', class_='pv-about__summary-text').get_text(strip=True) if soup.find('div', class_='pv-about__summary-text') else None
     ###########################################################################################
+    
+    # Moving Through sections (about, education, experience)
     sections = soup.find_all('section', class_='pv-profile-card')
     for section in sections:
         section_name = '__none__'
@@ -270,9 +270,8 @@ def scrape_profile_data(driver, profile_url, index):
         
             
             '''
-
+            # [ROUGH-WORK {some-tests}]:
             # len(section.find('ul').find_all('li', recursive=False)) = 2
-            
             # 
             all_exps = section.find('ul').find_all('li', recursive=False)
             for exp in all_exps:
@@ -290,9 +289,7 @@ def scrape_profile_data(driver, profile_url, index):
             len(section.find('ul').find_all('li', recursive=False)[1].find_all('span'))
             
             section.find('ul').find_all('li', recursive=False)[1].find_all('span')[0].get_text(strip=True)
-
             # 
-            
             '''
             
         
