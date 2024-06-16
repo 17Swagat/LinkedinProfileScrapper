@@ -11,20 +11,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 
-'''
-sections:
-        * guidance ❌
-        * insights ❌
-        * resources ❌
-        * content_collections ❌
-
-        * about
-        * education
-        * interests
-        * experience
-        * skills
-'''
-
 # 2.2 [PART]
 SECTION_MAPPING = {
     'about': 'about',
@@ -40,9 +26,9 @@ def login_linkedin(driver, username, password):
     
     email_field = driver.find_element(By.ID, 'username')
     email_field.send_keys(username)
+    
     password_field = driver.find_element(By.ID, 'password')
     password_field.send_keys(password)
-    
     password_field.send_keys(Keys.RETURN)
     time.sleep(2)
 
@@ -53,7 +39,7 @@ def login_linkedin(driver, username, password):
 def wait_for_verification(driver):
     verification_link_contains = 'https://www.linkedin.com/checkpoint/challenge/'
 
-    # Give some time for the redirection to happen, if needed
+    # Wait: For redirection:
     time.sleep(5)
     current_page_link = driver.current_url
 
@@ -77,12 +63,8 @@ def search_user(driver, first_name, last_name):
     # Click on [search] button:
     search_button = driver.find_element(By.XPATH, "//button[@aria-label='Click to start a search']")
     search_button.send_keys(Keys.RETURN)
-
     time.sleep(2)
 
-    # OLD:
-    # search_box = driver.find_element(By.XPATH, "//input[@class='search-global-typeahead__input']")
-    
     # Enter name in [Search] box & [Enter]:
     search_box = driver.find_element(By.CLASS_NAME, 'search-global-typeahead__input')
     search_box.send_keys(f"{first_name} {last_name}")
@@ -100,7 +82,7 @@ def search_user(driver, first_name, last_name):
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
     # 2.2
-    # Fetch: First 5 [Profile-URL-Links]
+    # Fetch: [Profile-URL-Links]
     profile_urls = []
     for profile in soup.select('a[href*="/in/"]'):
         url = profile['href']
@@ -122,7 +104,7 @@ def scrape_profile_data(driver, profile_url, index):
     driver.switch_to.window(driver.window_handles[-1])
     driver.get(profile_url)
 
-    # Wait for the profile page to load
+    # Waiting for the profile page to load:
     time.sleep(5)
     
     # Parse the profile page with BeautifulSoup
@@ -136,34 +118,6 @@ def scrape_profile_data(driver, profile_url, index):
     profile_data['identify_as'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
     # profile_data['location'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
     # profile_data['about'] = soup.find('div', class_='pv-about__summary-text').get_text(strip=True) if soup.find('div', class_='pv-about__summary-text') else None
-
-
-
-    # 2.1 [WORKED]
-    # profile_info = []
-    # sections = soup.find_all('section', class_='pv-profile-card')
-    # for section in sections:
-    #     section_name_about = section.find('div', {'id': 'about'})
-    #     section_name_education = section.find('div', {'id': 'education'})
-    #     section_name_interests = section.find('div', {'id': 'interests'})
-    #     section_name_experience = section.find('div', {'id': 'experience'})
-    #     section_name_skills = section.find('div', {'id': 'skills'})
-        
-    #     if section_name_about is not None:
-    #         section_name = 'about'
-    #     elif section_name_education is not None:
-    #         section_name = 'education'
-    #     elif section_name_skills is not None:
-    #         section_name = 'skills'
-    #     elif section_name_experience is not None:
-    #         section_name = 'experience'
-    #     elif section_name_interests is not None:
-    #         section_name = 'interests'
-    #     else:
-    #         section_name = '_+_none_+_'
-        # ...
-    
-    # 2.2
     ###########################################################################################
     sections = soup.find_all('section', class_='pv-profile-card')
     for section in sections:
@@ -185,101 +139,135 @@ def scrape_profile_data(driver, profile_url, index):
             # len(span_tags) = 2
             # need the 2nd one: 
             about_text = span_tags[1].get_text(strip=True)
-            profile_data['about'] = about_text
-        
-        elif section_name == 'education':
-            ...
-        
-        elif section_name == 'experience':
-            # print('experience')
-            # profile_data['experience'] = 'exp'
+            profile_data.update({
+                'about': about_text
+            })
 
+        elif section_name == 'education':
+            # educational-institutes:
+            all_edus = section.find('ul').find_all('li', recursive=False)
+            
+            # Ensure 'education' key exists and is a list
+            if 'education' not in profile_data:
+                profile_data['education'] = []
+            
+            for institute in all_edus:
+                info_count = len(institute)
+                
+                # Create a dictionary for the current institute's information
+                institute_data = {}
+                
+                # info_count:
+                # 4 + 1 = 5   : Institute_Name, Degree
+                # 7 + 1 = 8   : Institute_Name, Degree, Duration
+
+                if info_count == 5:
+                    institute_data = {
+                        'Institute_Name': institute.find_all('span')[1].get_text(strip=True),
+                        'Degree': institute.find_all('span')[3].get_text(strip=True)
+                    }
+                
+                elif info_count == 8:
+                    institute_data = {
+                        'Institute_Name': institute.find_all('span')[1].get_text(strip=True),
+                        'Degree': institute.find_all('span')[4].get_text(strip=True),
+                        'Duration': institute.find_all('span')[7].get_text(strip=True),
+                    }
+
+                else:
+                    print(info_count)
+                    print('CASE NOT EXPECTED\n')
+                
+                # Append the current institute's information to the 'education' list
+                profile_data['education'].append(institute_data)
+
+
+
+            
+            '''
+
+            len(section.find('ul').find_all('li', recursive=False))
+
+            section.find('ul').find_all('li', recursive=False)
+            --------------------------------------------------------------------
+
+            len(section.find('ul').find_all('li', recursive=False)) = 2
+            
+            len(section.find('ul').find_all('li', recursive=False)[0].find_all('span')) = 8
+            len(section.find('ul').find_all('li', recursive=False)[1].find_all('span')) = 8
+
+            # Institute:
+            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[0].get_text(strip=True)
+            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[1].get_text(strip=True)
+            # degree:
+            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[4].get_text(strip=True)
+            # duration:
+            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[7].get_text(strip=True)
+
+            --------------------------------------------------------------------
+
+            '''
+
+            ...
+        elif section_name == 'experience':
             # all-experiences
             all_exps = section.find('ul').find_all('li', recursive=False)
-            all_exps_count = len(all_exps)
-            for i in range(all_exps_count):
-                # profile_data['experience'].update({f'job_{i+1}': ''})  ❌
-                profile_data.update({
-                    'experience': {
-                        f'job_{i+1}': ''
-                    }
-                })
-
-            # going through all exps
-            for index, exp in enumerate(all_exps):
-                job_no = index + 1
+            
+            # Ensure 'experience' key exists and is a list
+            if 'experience' not in profile_data:
+                profile_data['experience'] = []
+            
+            # Going through all experiences
+            for exp in all_exps:
                 info_count = len(exp)
                 
+                # Create a dictionary for the current job's information
+                job_data = {}
+                
+                # info_count:
                 # 4 + 1 = 5   : Role, CompanyName
                 # 7 + 1 = 8   : Role, CompanyName, Duration(Time)
                 # 10 + 1 = 11 : Role, CompanyName, Duration(Time), Location
                 # 12 + 1 = 13 : Role, CompanyName, Duration(Time), Location, Description
 
                 if info_count == 5:
-                    profile_data.update({
-                        'experience': {
-                            f'job_{job_no}': {
-                                'role': exp.find_all('span')[1].get_text(strip=True),
-                                'company': exp.find_all('span')[4].get_text(strip=True)
-                            }
-                        }
-                    })
-                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
+                    job_data = {
+                        'role': exp.find_all('span')[1].get_text(strip=True),
+                        'company': exp.find_all('span')[4].get_text(strip=True)
+                    }
                 
                 elif info_count == 8:
-                    profile_data.update({
-                        'experience': {
-                            f'job_{job_no}': {
-                                'role': exp.find_all('span')[1].get_text(strip=True),
-                                'company': exp.find_all('span')[4].get_text(strip=True),
-                                'duration': exp.find_all('span')[7].get_text(strip=True),
-                            }
-                        }
-                    })
-                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
+                    job_data = {
+                        'role': exp.find_all('span')[1].get_text(strip=True),
+                        'company': exp.find_all('span')[4].get_text(strip=True),
+                        'duration': exp.find_all('span')[7].get_text(strip=True),
+                    }
 
                 elif info_count == 11:
-                    profile_data.update({
-                        'experience': {
-                            f'job_{job_no}': {
-                                'role': exp.find_all('span')[1].get_text(strip=True),
-                                'company': exp.find_all('span')[4].get_text(strip=True),
-                                'duration': exp.find_all('span')[7].get_text(strip=True),
-                            }
-                        }
-                    })
-                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['location'] = exp.find_all('span')[10].get_text(strip=True)
+                    job_data = {
+                        'role': exp.find_all('span')[1].get_text(strip=True),
+                        'company': exp.find_all('span')[4].get_text(strip=True),
+                        'duration': exp.find_all('span')[7].get_text(strip=True),
+                        'location': exp.find_all('span')[10].get_text(strip=True)
+                    }
 
                 elif info_count == 13:
-                    profile_data.update({
-                        'experience': {
-                            f'job_{job_no}': {
-                                'role': exp.find_all('span')[1].get_text(strip=True),
-                                'company': exp.find_all('span')[4].get_text(strip=True),
-                                'duration': exp.find_all('span')[7].get_text(strip=True),
-                                'job-description': exp.find_all('span')[12].get_text(strip=True)
-                            }
-                        }
-                    })
-                    # profile_data['experience'][f'job {job_no}']['role'] = exp.find_all('span')[1].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['company'] = exp.find_all('span')[4].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['duration'] = exp.find_all('span')[7].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['location'] = exp.find_all('span')[10].get_text(strip=True)
-                    # profile_data['experience'][f'job {job_no}']['job-description'] = exp.find_all('span')[12].get_text(strip=True)
+                    job_data = {
+                        'role': exp.find_all('span')[1].get_text(strip=True),
+                        'company': exp.find_all('span')[4].get_text(strip=True),
+                        'duration': exp.find_all('span')[7].get_text(strip=True),
+                        'location': exp.find_all('span')[10].get_text(strip=True),
+                        'job-description': exp.find_all('span')[12].get_text(strip=True)
+                    }
 
                 else:
                     print(info_count)
                     print('CASE NOT EXPECTED\n')
+                
+                # Append the current job's information to the 'experience' list
+                profile_data['experience'].append(job_data)
 
-
-            ...
-
+        
             
             '''
 
@@ -307,7 +295,6 @@ def scrape_profile_data(driver, profile_url, index):
             
             '''
             
-            ...
         
         elif section_name == 'skills':
             ...
@@ -315,8 +302,6 @@ def scrape_profile_data(driver, profile_url, index):
             ...
 
     ###########################################################################################
-
-
 
     # Save profile data to a JSON file
     file_name = f'profile_info_{index}.json'
