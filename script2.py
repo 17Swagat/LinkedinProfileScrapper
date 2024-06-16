@@ -1,10 +1,27 @@
+'''
+
+NOTE: 
+
+*   The following script outputs all the profile-infos into .json files [1 json file per profile.], 
+    which are MORE READABLE than the .csv file which can be created using the script `json_to_csv.py`.
+
+*  The script also deals with situations where after login, a verfication screen may pop-up, in which
+   the user must himself, take the verfication test by himself. This is the only part in the script which
+   is not automated. The rest of the steps have been automated.
+
+*  A Demo working of this script could be found at: 
+
+'''
+
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import time
 import json
-import csv
+# import csv
 from bs4 import BeautifulSoup
+# pswd-hiding:
+import stdiomask
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -20,7 +37,7 @@ SECTION_MAPPING = {
     'skills': 'skills'
 }
 
-def login_linkedin(driver, username, password):
+def login(driver, username, password):
     driver.get('https://www.linkedin.com/login')
     time.sleep(2)
     
@@ -78,7 +95,7 @@ def search_user(driver, first_name, last_name):
     
 
     # 2
-    # Parse the page with BeautifulSoup
+    # Parsing the page with BeautifulSoup
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
     # 2.2
@@ -87,7 +104,6 @@ def search_user(driver, first_name, last_name):
     for profile in soup.select('a[href*="/in/"]'):
         url = profile['href']
         if url.startswith('/in/') or '/in/' in url:
-            # full_url = f"https://www.linkedin.com{url}"
             full_url = f"{url}"
             if full_url not in profile_urls:
                 profile_urls.append(full_url)
@@ -107,7 +123,7 @@ def scrape_profile_data(driver, profile_url, index):
     # Waiting for the profile page to load:
     time.sleep(5)
     
-    # Parse the profile page with BeautifulSoup
+    # Parsing the profile page with beautifulSoup:
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
     # Extract profile data:
@@ -116,9 +132,11 @@ def scrape_profile_data(driver, profile_url, index):
     profile_data['name'] = soup.find('h1', class_='text-heading-xlarge').get_text(strip=True) if soup.find('h1', class_='text-heading-xlarge') else None
     profile_data['headline'] = soup.find('div', class_='text-body-medium').get_text(strip=True) if soup.find('div', class_='text-body-medium') else None
     profile_data['identify_as'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
-    ###########################################################################################
+    if profile_data['identify_as'] != ('(He/Him)' or 'She/Her'):
+        profile_data['identify_as'] = 'N/A'
     
-    # Moving Through sections (about, education, experience)
+    ###########################################################################################
+    # Moving Through sections [About, Education, Experience]:
     sections = soup.find_all('section', class_='pv-profile-card')
     for section in sections:
         section_name = '__none__'
@@ -147,7 +165,7 @@ def scrape_profile_data(driver, profile_url, index):
             # educational-institutes:
             all_edus = section.find('ul').find_all('li', recursive=False)
             
-            # Ensure 'education' key exists and is a list
+            # Ensuring 'education' key exists:
             if 'education' not in profile_data:
                 profile_data['education'] = []
             
@@ -178,42 +196,15 @@ def scrape_profile_data(driver, profile_url, index):
                     print(info_count)
                     print('CASE NOT EXPECTED\n')
                 
-                # Append the current institute's information to the 'education' list
+                # Appending the current institute's information:
                 profile_data['education'].append(institute_data)
 
 
-
-            
-            '''
-
-            len(section.find('ul').find_all('li', recursive=False))
-
-            section.find('ul').find_all('li', recursive=False)
-            --------------------------------------------------------------------
-
-            len(section.find('ul').find_all('li', recursive=False)) = 2
-            
-            len(section.find('ul').find_all('li', recursive=False)[0].find_all('span')) = 8
-            len(section.find('ul').find_all('li', recursive=False)[1].find_all('span')) = 8
-
-            # Institute:
-            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[0].get_text(strip=True)
-            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[1].get_text(strip=True)
-            # degree:
-            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[4].get_text(strip=True)
-            # duration:
-            section.find('ul').find_all('li', recursive=False)[0].find_all('span')[7].get_text(strip=True)
-
-            --------------------------------------------------------------------
-
-            '''
-
-            ...
         elif section_name == 'experience':
             # all-experiences
             all_exps = section.find('ul').find_all('li', recursive=False)
             
-            # Ensure 'experience' key exists and is a list
+            # Ensureing 'experience' key exists 
             if 'experience' not in profile_data:
                 profile_data['experience'] = []
             
@@ -221,7 +212,6 @@ def scrape_profile_data(driver, profile_url, index):
             for exp in all_exps:
                 info_count = len(exp)
                 
-                # Create a dictionary for the current job's information
                 job_data = {}
                 
                 # info_count:
@@ -264,35 +254,8 @@ def scrape_profile_data(driver, profile_url, index):
                     print(info_count)
                     print('CASE NOT EXPECTED\n')
                 
-                # Append the current job's information to the 'experience' list
                 profile_data['experience'].append(job_data)
 
-        
-            
-            '''
-            # [ROUGH-WORK {some-tests}]:
-            # len(section.find('ul').find_all('li', recursive=False)) = 2
-            # 
-            all_exps = section.find('ul').find_all('li', recursive=False)
-            for exp in all_exps:
-                ...
-
-            # ver 1 ✅ title
-            section.find('ul').find_all('li', recursive=False)[0].find('span', {'class': 'visually-hidden'}).get_text(strip=True)  
-            # ver 2
-            section.find('ul').find_all('li', recursive=False)[0].find_all('span')  
-            
-
-            # xxx 1
-            len(section.find('ul').find_all('li', recursive=False))
-            
-            len(section.find('ul').find_all('li', recursive=False)[1].find_all('span'))
-            
-            section.find('ul').find_all('li', recursive=False)[1].find_all('span')[0].get_text(strip=True)
-            # 
-            '''
-            
-        
         elif section_name == 'skills':
             ...
         elif section_name == 'interests':
@@ -310,14 +273,11 @@ def scrape_profile_data(driver, profile_url, index):
     driver.switch_to.window(driver.window_handles[0])
 
 
-
-
-
-def main(first_name, last_name, username, password):
+def main(first_name, last_name, email, password):
     # driver = webdriver.Chrome()
     driver = webdriver.Edge()
     try:
-        login_linkedin(driver, username, password)
+        login(driver, email, password)
         profile_urls = search_user(driver, first_name, last_name)
 
         # Scrape each profile URL and save data
@@ -329,4 +289,14 @@ def main(first_name, last_name, username, password):
 
 
 if __name__ == "__main__":
-    main('swagat', 'baruah', '17swagat@gmail.com', 'thereisablackhole17')
+    email = input('Enter your Username/Email(Linkedin): ')
+    password = stdiomask.getpass("Enter your Password: ", '*')
+    # password = input('Enter your Password: ')
+    fname = input('Enter First Name: ')
+    lname = input('Enter Last Name: ')
+    
+    # main('swagat', 'baruah', '17swagat@gmail.com', 'thereisablackhole17')
+    main(first_name = fname, 
+         last_name = lname, 
+         email = email, 
+         password = password)

@@ -27,16 +27,7 @@ while True:
 # Define the CSV columns based on the keys in the JSON files
 csv_columns = [
     'name', 'headline', 'identify_as', 'about', 
-    'experience_role_1', 'experience_company_1', 'experience_duration_1', 'experience_location_1', 'experience_description_1',
-    'experience_role_2', 'experience_company_2', 'experience_duration_2', 'experience_location_2', 'experience_description_2',
-    'experience_role_3', 'experience_company_3', 'experience_duration_3', 'experience_location_3', 'experience_description_3',
-    'experience_role_4', 'experience_company_4', 'experience_duration_4', 'experience_location_4', 'experience_description_4',
-    'experience_role_5', 'experience_company_5', 'experience_duration_5', 'experience_location_5', 'experience_description_5',
-    'education_institute_1', 'education_degree_1',
-    'education_institute_2', 'education_degree_2',
-    'education_institute_3', 'education_degree_3',
-    'education_institute_4', 'education_degree_4',
-    'education_institute_5', 'education_degree_5'
+    'experience', 'education'
 ]
 
 # Create a function to flatten the JSON data
@@ -47,20 +38,27 @@ def flatten_profile(profile):
     flattened['identify_as'] = profile.get('identify_as', '')
     flattened['about'] = profile.get('about', '')
 
-    # Flatten experience
+    # Combine experiences
     experiences = profile.get('experience', [])
-    for idx, exp in enumerate(experiences, start=1):
-        flattened[f'experience_role_{idx}'] = exp.get('role', '')
-        flattened[f'experience_company_{idx}'] = exp.get('company', '')
-        flattened[f'experience_duration_{idx}'] = exp.get('duration', '')
-        flattened[f'experience_location_{idx}'] = exp.get('location', '')
-        flattened[f'experience_description_{idx}'] = exp.get('job-description', '')
+    experience_list = []
+    for exp in experiences:
+        experience_str = f"Role: {exp.get('role', '')}, Company: {exp.get('company', '')}"
+        if 'duration' in exp:
+            experience_str += f", Duration: {exp.get('duration', '')}"
+        if 'location' in exp:
+            experience_str += f", Location: {exp.get('location', '')}"
+        if 'job-description' in exp:
+            experience_str += f", Description: {exp.get('job-description', '')}"
+        experience_list.append(experience_str)
+    flattened['experience'] = '\n'.join(experience_list)
 
-    # Flatten education
+    # Combine educations
     educations = profile.get('education', [])
-    for idx, edu in enumerate(educations, start=1):
-        flattened[f'education_institute_{idx}'] = edu.get('Institute_Name', '')
-        flattened[f'education_degree_{idx}'] = edu.get('Degree', '')
+    education_list = []
+    for edu in educations:
+        education_str = f"Institute: {edu.get('Institute_Name', '')}, Degree: {edu.get('Degree', '')}"
+        education_list.append(education_str)
+    flattened['education'] = '\n'.join(education_list)
 
     return flattened
 
