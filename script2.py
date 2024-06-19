@@ -5,11 +5,16 @@ NOTE:
 *   The following script outputs all the profile-infos into .json files [1 json file per profile.], 
     which are MORE READABLE than the .csv file which can be created using the script `json_to_csv.py`.
 
-*  The script also deals with situations where after login, a verfication screen may pop-up, in which
-   the user must himself, take the verfication test by himself. This is the only part in the script which
-   is not automated. The rest of the steps have been automated.
+*   The script also deals with situations where after login, a verfication screen may pop-up, in which
+    the user must himself, take the verfication test by himself. This is the only part in the script which
+    is not automated. The rest of the steps have been automated.
 
-*  A Demo working of this script could be found at: 
+*   [RECOMMANDATION]: Personally I recommand to view the `.csv` within vs-code with the help of 'Excel-Viewer' extension.
+    With this extension, the data inside the cells looks organized. For some reason, when the same .csv file is being 
+    viewed within `Excel`, the content inside the cells get squished up.
+
+*   A Demo working of this script could be found at [In my system]: 
+    https://drive.google.com/file/d/1330E4T3Kc7_jaLb9qjLSixNCZ8ur9FU4/view?usp=sharing 
 
 '''
 
@@ -18,8 +23,10 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import time
 import json
+
 # import csv
 from bs4 import BeautifulSoup
+
 # pswd-hiding:
 import stdiomask
 
@@ -30,31 +37,32 @@ from selenium.common.exceptions import TimeoutException
 
 # 2.2 [PART]
 SECTION_MAPPING = {
-    'about': 'about',
-    'education': 'education',
-    'interests': 'interests',
-    'experience': 'experience',
-    'skills': 'skills'
+    "about": "about",
+    "education": "education",
+    "interests": "interests",
+    "experience": "experience",
+    "skills": "skills",
 }
 
+
 def login(driver, username, password):
-    driver.get('https://www.linkedin.com/login')
+    driver.get("https://www.linkedin.com/login")
     time.sleep(2)
-    
-    email_field = driver.find_element(By.ID, 'username')
+
+    email_field = driver.find_element(By.ID, "username")
     email_field.send_keys(username)
-    
-    password_field = driver.find_element(By.ID, 'password')
+
+    password_field = driver.find_element(By.ID, "password")
     password_field.send_keys(password)
     password_field.send_keys(Keys.RETURN)
     time.sleep(2)
 
     # verfication-page:
     wait_for_verification(driver=driver)
-    
+
 
 def wait_for_verification(driver):
-    verification_link_contains = 'https://www.linkedin.com/checkpoint/challenge/'
+    verification_link_contains = "https://www.linkedin.com/checkpoint/challenge/"
 
     # Wait: For redirection:
     time.sleep(5)
@@ -62,8 +70,12 @@ def wait_for_verification(driver):
 
     try:
         if verification_link_contains in current_page_link:
-            print("Verification page detected. Waiting for user to complete the verification...")
-            WebDriverWait(driver, timeout=600).until(lambda d: verification_link_contains not in d.current_url)
+            print(
+                "Verification page detected. Waiting for user to complete the verification..."
+            )
+            WebDriverWait(driver, timeout=600).until(
+                lambda d: verification_link_contains not in d.current_url
+            )
             print("User has completed the verification.")
     except TimeoutException:
         print("Verification not completed in time. Exiting.")
@@ -78,42 +90,46 @@ def search_user(driver, first_name, last_name):
     time.sleep(3)
 
     # Click on [search] button:
-    search_button = driver.find_element(By.XPATH, "//button[@aria-label='Click to start a search']")
+    search_button = driver.find_element(
+        By.XPATH, "//button[@aria-label='Click to start a search']"
+    )
     search_button.send_keys(Keys.RETURN)
     time.sleep(2)
 
     # Enter name in [Search] box & [Enter]:
-    search_box = driver.find_element(By.CLASS_NAME, 'search-global-typeahead__input')
+    search_box = driver.find_element(By.CLASS_NAME, "search-global-typeahead__input")
     search_box.send_keys(f"{first_name} {last_name}")
     search_box.send_keys(Keys.RETURN)
     time.sleep(3)
 
     # Click on the [people] button:
-    people_button = driver.find_element(By.XPATH, "//button[contains(@class, 'artdeco-pill') and contains(@class, 'search-reusables__filter-pill-button') and @type='button' and text()='People']")
+    people_button = driver.find_element(
+        By.XPATH,
+        "//button[contains(@class, 'artdeco-pill') and contains(@class, 'search-reusables__filter-pill-button') and @type='button' and text()='People']",
+    )
     people_button.click()
     time.sleep(3)
-    
 
     # 2
     # Parsing the page with BeautifulSoup
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    soup = BeautifulSoup(driver.page_source, "html.parser")
 
     # 2.2
     # Fetch: [Profile-URL-Links]
     profile_urls = []
     for profile in soup.select('a[href*="/in/"]'):
-        url = profile['href']
-        if url.startswith('/in/') or '/in/' in url:
+        url = profile["href"]
+        if url.startswith("/in/") or "/in/" in url:
             full_url = f"{url}"
             if full_url not in profile_urls:
                 profile_urls.append(full_url)
-        if len(profile_urls) >= 10: #5:
+        if len(profile_urls) >= 10:  # 5:
             break
 
     return profile_urls
 
 
-
+# Custom Profile Info Scrapper:
 def scrape_profile_data(driver, profile_url, index):
     # Open a new tab
     driver.execute_script("window.open('');")
@@ -122,150 +138,136 @@ def scrape_profile_data(driver, profile_url, index):
 
     # Waiting for the profile page to load:
     time.sleep(5)
-    
-    # Parsing the profile page with beautifulSoup:
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    # Parsing the profile page with BeautifulSoup:
+    soup = BeautifulSoup(driver.page_source, "html.parser")
 
     # Extract profile data:
     profile_data = {}
     # ✅✅✅
-    profile_data['name'] = soup.find('h1', class_='text-heading-xlarge').get_text(strip=True) if soup.find('h1', class_='text-heading-xlarge') else None
-    profile_data['headline'] = soup.find('div', class_='text-body-medium').get_text(strip=True) if soup.find('div', class_='text-body-medium') else None
-    profile_data['identify_as'] = soup.find('span', class_='text-body-small').get_text(strip=True) if soup.find('span', class_='text-body-small') else None
-    if profile_data['identify_as'] != ('(He/Him)' or 'She/Her'):
-        profile_data['identify_as'] = 'N/A'
-    
+    profile_data["name"] = (
+        soup.find("h1", class_="text-heading-xlarge").get_text(strip=True)
+        if soup.find("h1", class_="text-heading-xlarge")
+        else None
+    )
+    profile_data["headline"] = (
+        soup.find("div", class_="text-body-medium").get_text(strip=True)
+        if soup.find("div", class_="text-body-medium")
+        else None
+    )
+    profile_data["identify_as"] = (
+        soup.find("span", class_="text-body-small").get_text(strip=True)
+        if soup.find("span", class_="text-body-small")
+        else None
+    )
+    if profile_data["identify_as"] != ("(He/Him)" or "She/Her"):
+        profile_data["identify_as"] = "N/A"
+
     ###########################################################################################
     # Moving Through sections [About, Education, Experience]:
-    sections = soup.find_all('section', class_='pv-profile-card')
+    sections = soup.find_all("section", class_="pv-profile-card")
     for section in sections:
-        section_name = '__none__'
-        
+        section_name = "__none__"
+
         # Check each section for the defined IDs
         for section_id, name in SECTION_MAPPING.items():
-            if section.find('div', {'id': section_id}) is not None:
+            if section.find("div", {"id": section_id}) is not None:
                 # match-found
                 section_name = name
-                break  
-        
-        if section_name == '__none__':
+                break
+
+        if section_name == "__none__":
             continue
 
-        if section_name == 'about':
+        if section_name == "about":
             # ✅
-            span_tags = section.find_all('span', class_='visually-hidden')
+            span_tags = section.find_all("span", class_="visually-hidden")
             # len(span_tags) = 2
-            # need the 2nd one: 
+            # need the 2nd one:
             about_text = span_tags[1].get_text(strip=True)
-            profile_data.update({
-                'about': about_text
-            })
+            profile_data.update({"about": about_text})
 
-        elif section_name == 'education':
+        elif section_name == "education":
             # educational-institutes:
-            all_edus = section.find('ul').find_all('li', recursive=False)
-            
+            all_edus = section.find("ul").find_all("li", recursive=False)
+
             # Ensuring 'education' key exists:
-            if 'education' not in profile_data:
-                profile_data['education'] = []
-            
+            if "education" not in profile_data:
+                profile_data["education"] = []
+
             for institute in all_edus:
-                info_count = len(institute)
-                
+                span_elements = institute.find_all("span")
+                info_count = len(span_elements)
+
                 # Create a dictionary for the current institute's information
                 institute_data = {}
-                
+
                 # info_count:
                 # 4 + 1 = 5   : Institute_Name, Degree
                 # 7 + 1 = 8   : Institute_Name, Degree, Duration
 
-                if info_count == 5:
-                    institute_data = {
-                        'Institute_Name': institute.find_all('span')[1].get_text(strip=True),
-                        'Degree': institute.find_all('span')[3].get_text(strip=True)
-                    }
-                
-                elif info_count == 8:
-                    institute_data = {
-                        'Institute_Name': institute.find_all('span')[1].get_text(strip=True),
-                        'Degree': institute.find_all('span')[4].get_text(strip=True),
-                        'Duration': institute.find_all('span')[7].get_text(strip=True),
-                    }
+                if info_count >= 4:
+                    institute_data["Institute_Name"] = span_elements[1].get_text(
+                        strip=True
+                    )
+                    institute_data["Degree"] = (
+                        span_elements[3].get_text(strip=True)
+                        if info_count > 3
+                        else None
+                    )
 
-                else:
-                    print(info_count)
-                    print('CASE NOT EXPECTED\n')
-                
+                if info_count >= 8:
+                    institute_data["Duration"] = span_elements[7].get_text(strip=True)
+
                 # Appending the current institute's information:
-                profile_data['education'].append(institute_data)
+                profile_data["education"].append(institute_data)
 
-
-        elif section_name == 'experience':
+        elif section_name == "experience":
             # all-experiences
-            all_exps = section.find('ul').find_all('li', recursive=False)
-            
-            # Ensureing 'experience' key exists 
-            if 'experience' not in profile_data:
-                profile_data['experience'] = []
-            
+            all_exps = section.find("ul").find_all("li", recursive=False)
+
+            # Ensureing 'experience' key exists
+            if "experience" not in profile_data:
+                profile_data["experience"] = []
+
             # Going through all experiences
             for exp in all_exps:
-                info_count = len(exp)
-                
+                span_elements = exp.find_all("span")
+                info_count = len(span_elements)
+
                 job_data = {}
-                
+
                 # info_count:
                 # 4 + 1 = 5   : Role, CompanyName
                 # 7 + 1 = 8   : Role, CompanyName, Duration(Time)
                 # 10 + 1 = 11 : Role, CompanyName, Duration(Time), Location
                 # 12 + 1 = 13 : Role, CompanyName, Duration(Time), Location, Description
 
-                if info_count == 5:
-                    job_data = {
-                        'role': exp.find_all('span')[1].get_text(strip=True),
-                        'company': exp.find_all('span')[4].get_text(strip=True)
-                    }
-                
-                elif info_count == 8:
-                    job_data = {
-                        'role': exp.find_all('span')[1].get_text(strip=True),
-                        'company': exp.find_all('span')[4].get_text(strip=True),
-                        'duration': exp.find_all('span')[7].get_text(strip=True),
-                    }
+                if info_count >= 5:
+                    job_data["role"] = span_elements[1].get_text(strip=True)
+                    job_data["company"] = span_elements[4].get_text(strip=True)
 
-                elif info_count == 11:
-                    job_data = {
-                        'role': exp.find_all('span')[1].get_text(strip=True),
-                        'company': exp.find_all('span')[4].get_text(strip=True),
-                        'duration': exp.find_all('span')[7].get_text(strip=True),
-                        'location': exp.find_all('span')[10].get_text(strip=True)
-                    }
+                if info_count >= 8:
+                    job_data["duration"] = span_elements[7].get_text(strip=True)
 
-                elif info_count == 13:
-                    job_data = {
-                        'role': exp.find_all('span')[1].get_text(strip=True),
-                        'company': exp.find_all('span')[4].get_text(strip=True),
-                        'duration': exp.find_all('span')[7].get_text(strip=True),
-                        'location': exp.find_all('span')[10].get_text(strip=True),
-                        'job-description': exp.find_all('span')[12].get_text(strip=True)
-                    }
+                if info_count >= 11:
+                    job_data["location"] = span_elements[10].get_text(strip=True)
 
-                else:
-                    print(info_count)
-                    print('CASE NOT EXPECTED\n')
-                
-                profile_data['experience'].append(job_data)
+                if info_count >= 13:
+                    job_data["job-description"] = span_elements[12].get_text(strip=True)
 
-        elif section_name == 'skills':
+                profile_data["experience"].append(job_data)
+
+        elif section_name == "skills":
             ...
-        elif section_name == 'interests':
+        elif section_name == "interests":
             ...
 
     ###########################################################################################
 
     # Save profile data to a JSON file
-    file_name = f'profile_info_{index}.json'
-    with open(file_name, 'w') as json_file:
+    file_name = f"profile_info_{index}.json"
+    with open(file_name, "w") as json_file:  # , indent=4:
         json.dump(profile_data, json_file, indent=4)
 
     # Close the current tab and switch back to the initial tab
@@ -289,14 +291,9 @@ def main(first_name, last_name, email, password):
 
 
 if __name__ == "__main__":
-    email = input('Enter your Username/Email(Linkedin): ')
-    password = stdiomask.getpass("Enter your Password: ", '*')
-    # password = input('Enter your Password: ')
-    fname = input('Enter First Name: ')
-    lname = input('Enter Last Name: ')
+    email = input("Enter your Username/Email(Linkedin): ")
+    password = stdiomask.getpass("Enter your Password: ", "*")
+    fname = input("Enter First Name: ")
+    lname = input("Enter Last Name: ")
     
-    # main('swagat', 'baruah', '17swagat@gmail.com', 'thereisablackhole17')
-    main(first_name = fname, 
-         last_name = lname, 
-         email = email, 
-         password = password)
+    main(first_name=fname, last_name=lname, email=email, password=password)
